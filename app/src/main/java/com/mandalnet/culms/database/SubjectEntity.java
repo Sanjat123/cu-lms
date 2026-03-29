@@ -11,12 +11,14 @@ public class SubjectEntity {
     public String name;
     public String code;
     public String attendance;
-    public String lmsLink;
+public String lmsLink;
+    public int semesterId;
 
-    public SubjectEntity(String name, String code, String attendance, String lmsLink) {
+    public SubjectEntity(String name, String code, String attendance, String lmsLink, int semesterId) {
         this.name = name;
         this.code = code;
         this.attendance = attendance;
         this.lmsLink = lmsLink;
+        this.semesterId = semesterId;
     }
 }
