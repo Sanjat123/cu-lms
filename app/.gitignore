@@ -1,0 +1,11 @@
+# Android / Gradle ignores
+.gradle/
+build/
+captures/
+local.properties
+.DS_Store
+*.zip
+*.jar
+
+# Exclude Gradle distribution folder if you manually downloaded it
+gradle-*/
