@@ -1,0 +1,11 @@
+<resources>
+    <color name="primary_gold">#FFD700</color>
+    <color name="dark_bg">#121212</color>
+    <color name="card_surface">#1E1E1E</color>
+    <color name="text_white">#FFFFFF</color>
+
+    <style name="Theme.CULMS" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary_gold</item>
+        <item name="android:windowBackground">@color/dark_bg</item>
+    </style>
+</resources>

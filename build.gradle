@@ -4,7 +4,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        // Matches your Gradle 8.10.2 setup
+        // Aapke Gradle 8.10.2 ke liye compatible version
         classpath 'com.android.tools.build:gradle:8.7.2'
     }
 }

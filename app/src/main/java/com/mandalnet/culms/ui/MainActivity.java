@@ -2,10 +2,13 @@ package com.mandalnet.culms.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.mandalnet.culms.R;
 import com.mandalnet.culms.api.LMSFetcher;
 import com.mandalnet.culms.models.Subject;
@@ -19,28 +22,51 @@ public class MainActivity extends AppCompatActivity {
     private SubjectAdapter adapter;
     private DataRepository repository;
     private List<Subject> subjectList = new ArrayList<>();
+    private ProgressBar progressBar;
+    private BottomNavigationView bottomNav;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main); 
 
-        // UI Initialization
+        // 1. UI Initialization
+        progressBar = findViewById(R.id.progressBar); // Layout mein add kar lena
         recyclerView = findViewById(R.id.subjectRecyclerView);
+        bottomNav = findViewById(R.id.bottomNav);
+        
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // Repository Initialization
+        // 2. Repository & Adapter Setup
         repository = new DataRepository(this);
-
-        // Adapter setup with click listener
-        adapter = new SubjectAdapter(subjectList);
+        adapter = new SubjectAdapter(subjectList, this::onSubjectClicked);
         recyclerView.setAdapter(adapter);
 
-        // Logic: 1. Pehle Offline data load karo (Fast)
-        loadOfflineData();
+        // 3. Bottom Navigation Logic
+        setupBottomNavigation();
 
-        // Logic: 2. Phir Background mein Sync karo (Fresh Data)
+        // 4. Data Loading Flow
+        loadOfflineData();
         syncWithLMS();
+    }
+
+    private void setupBottomNavigation() {
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                // Already on Home, maybe scroll to top
+                recyclerView.smoothScrollToPosition(0);
+                return true;
+            } else if (id == R.id.nav_profile) {
+                // Profile Screen par bhejein
+                startActivity(new Intent(this, ProfileActivity.class));
+                return true;
+            } else if (id == R.id.nav_resources) {
+                Toast.makeText(this, "Select a subject to view study material", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+            return false;
+        });
     }
 
     private void loadOfflineData() {
@@ -48,39 +74,44 @@ public class MainActivity extends AppCompatActivity {
             List<Subject> offlineSubjects = repository.getOfflineSubjects();
             if (!offlineSubjects.isEmpty()) {
                 runOnUiThread(() -> {
-                    subjectList.clear();
-                    subjectList.addAll(offlineSubjects);
-                    adapter.notifyDataSetChanged();
+                    updateUI(offlineSubjects);
                 });
             }
         }).start();
     }
 
     private void syncWithLMS() {
+        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+        
         repository.refreshSubjects(new LMSFetcher.LMSCallback() {
             @Override
             public void onSuccess(List<Subject> subjects) {
                 runOnUiThread(() -> {
-                    subjectList.clear();
-                    subjectList.addAll(subjects);
-                    adapter.notifyDataSetChanged();
-                    Toast.makeText(MainActivity.this, "Data Synced with LMS", Toast.LENGTH_SHORT).show();
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    updateUI(subjects);
+                    Toast.makeText(MainActivity.this, "MandalNet: Data Synced", Toast.LENGTH_SHORT).show();
                 });
             }
 
             @Override
             public void onError(String error) {
-                runOnUiThread(() -> 
-                    Toast.makeText(MainActivity.this, "Sync Failed: Using Offline Data", Toast.LENGTH_LONG).show()
-                );
+                runOnUiThread(() -> {
+                    if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    Toast.makeText(MainActivity.this, "Offline Mode: Connection Error", Toast.LENGTH_LONG).show();
+                });
             }
         });
     }
 
-    // Is method ko SubjectAdapter mein set karein taaki click par PPTs khulein
+    private void updateUI(List<Subject> subjects) {
+        subjectList.clear();
+        subjectList.addAll(subjects);
+        adapter.notifyDataSetChanged();
+    }
+
     public void onSubjectClicked(Subject subject) {
         Intent intent = new Intent(this, ResourceActivity.class);
-        intent.putExtra("SUBJECT_URL", subject.getLmsLink());
+        intent.putExtra("SUBJECT_URL", subject.getLmsLink()); 
         intent.putExtra("SUBJECT_NAME", subject.getName());
         startActivity(intent);
     }

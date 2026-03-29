@@ -12,8 +12,18 @@ import java.util.List;
 
 public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.ViewHolder> {
     private List<Subject> subjectList;
+    private OnSubjectClickListener listener;
 
-    public SubjectAdapter(List<Subject> list) { this.subjectList = list; }
+    // Click event handle karne ke liye interface
+    public interface OnSubjectClickListener {
+        void onSubjectClick(Subject subject);
+    }
+
+    // Constructor updated listener ke saath
+    public SubjectAdapter(List<Subject> list, OnSubjectClickListener listener) { 
+        this.subjectList = list; 
+        this.listener = listener;
+    }
 
     @NonNull
     @Override
@@ -28,6 +38,13 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.ViewHold
         holder.name.setText(subject.getName());
         holder.code.setText(subject.getCode());
         holder.attendance.setText("Attendance: " + subject.getAttendance());
+        
+        // Card click par listener trigger karein
+        holder.itemView.setOnClickListener(v -> {
+            if (listener != null) {
+                listener.onSubjectClick(subject);
+            }
+        });
     }
 
     @Override
@@ -37,6 +54,7 @@ public class SubjectAdapter extends RecyclerView.Adapter<SubjectAdapter.ViewHold
         TextView name, code, attendance;
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
+            // item_subject.xml ke IDs ke saath matching
             name = itemView.findViewById(R.id.tvSubjectName);
             code = itemView.findViewById(R.id.tvSubjectCode);
             attendance = itemView.findViewById(R.id.tvAttendance);
