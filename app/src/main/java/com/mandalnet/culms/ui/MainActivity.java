@@ -16,6 +16,10 @@ import com.mandalnet.culms.repository.DataRepository;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * MainActivity: The heart of MandalNet. 
+ * Handles course listing, background attendance syncing, and offline storage.
+ */
 public class MainActivity extends AppCompatActivity {
 
     private RecyclerView recyclerView;
@@ -31,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main); 
 
         // 1. UI Initialization
-        progressBar = findViewById(R.id.progressBar); // Layout mein add kar lena
+        progressBar = findViewById(R.id.progressBar);
         recyclerView = findViewById(R.id.subjectRecyclerView);
         bottomNav = findViewById(R.id.bottomNav);
         
@@ -42,27 +46,25 @@ public class MainActivity extends AppCompatActivity {
         adapter = new SubjectAdapter(subjectList, this::onSubjectClicked);
         recyclerView.setAdapter(adapter);
 
-        // 3. Bottom Navigation Logic
+        // 3. Navigation Logic
         setupBottomNavigation();
 
         // 4. Data Loading Flow
-        loadOfflineData();
-        syncWithLMS();
+        loadOfflineData(); // Load instantly from Room DB
+        syncWithLMS();     // Fetch fresh data from CU-LMS
     }
 
     private void setupBottomNavigation() {
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
-                // Already on Home, maybe scroll to top
                 recyclerView.smoothScrollToPosition(0);
                 return true;
             } else if (id == R.id.nav_profile) {
-                // Profile Screen par bhejein
                 startActivity(new Intent(this, ProfileActivity.class));
                 return true;
             } else if (id == R.id.nav_resources) {
-                Toast.makeText(this, "Select a subject to view study material", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Select a subject from the list", Toast.LENGTH_SHORT).show();
                 return true;
             }
             return false;
@@ -72,35 +74,68 @@ public class MainActivity extends AppCompatActivity {
     private void loadOfflineData() {
         new Thread(() -> {
             List<Subject> offlineSubjects = repository.getOfflineSubjects();
-            if (!offlineSubjects.isEmpty()) {
-                runOnUiThread(() -> {
-                    updateUI(offlineSubjects);
-                });
+            if (offlineSubjects != null && !offlineSubjects.isEmpty()) {
+                runOnUiThread(() -> updateUI(offlineSubjects));
             }
         }).start();
     }
 
     private void syncWithLMS() {
-        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.VISIBLE);
         
-        repository.refreshSubjects(new LMSFetcher.LMSCallback() {
+        LMSFetcher.fetchMyCourses(this, new LMSFetcher.LMSCallback() {
             @Override
             public void onSuccess(List<Subject> subjects) {
                 runOnUiThread(() -> {
-                    if (progressBar != null) progressBar.setVisibility(View.GONE);
+                    progressBar.setVisibility(View.GONE);
                     updateUI(subjects);
-                    Toast.makeText(MainActivity.this, "MandalNet: Data Synced", Toast.LENGTH_SHORT).show();
+                    
+                    // CRITICAL: Save to offline DB
+                    repository.saveSubjects(subjects);
+
+                    // START DEEP SYNC: Fetch attendance for each subject
+                    fetchAllAttendance(subjects);
+
+                    Toast.makeText(MainActivity.this, 
+                        "MandalNet: Syncing Attendance...", 
+                        Toast.LENGTH_SHORT).show();
                 });
             }
 
             @Override
             public void onError(String error) {
                 runOnUiThread(() -> {
-                    if (progressBar != null) progressBar.setVisibility(View.GONE);
-                    Toast.makeText(MainActivity.this, "Offline Mode: Connection Error", Toast.LENGTH_LONG).show();
+                    progressBar.setVisibility(View.GONE);
+                    Toast.makeText(MainActivity.this, error, Toast.LENGTH_LONG).show();
                 });
             }
         });
+    }
+
+    /**
+     * Loops through all subjects to fetch their individual attendance percentages.
+     */
+    private void fetchAllAttendance(List<Subject> subjects) {
+        for (Subject subject : subjects) {
+            LMSFetcher.fetchAttendance(this, subject.getLmsLink(), new LMSFetcher.AttendanceCallback() {
+                @Override
+                public void onSuccess(String percentage) {
+                    runOnUiThread(() -> {
+                        // Update the specific subject object
+                        subject.setAttendance(percentage);
+                        // Update the UI card for this specific subject
+                        adapter.notifyItemChanged(subjects.indexOf(subject));
+                        // Update offline DB with the new attendance
+                        repository.updateSubject(subject);
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    // Fail silently for individual attendance items
+                }
+            });
+        }
     }
 
     private void updateUI(List<Subject> subjects) {
@@ -114,5 +149,14 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra("SUBJECT_URL", subject.getLmsLink()); 
         intent.putExtra("SUBJECT_NAME", subject.getName());
         startActivity(intent);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (bottomNav.getSelectedItemId() != R.id.nav_home) {
+            bottomNav.setSelectedItemId(R.id.nav_home);
+        } else {
+            super.onBackPressed();
+        }
     }
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary_gold">#FFD700</color>
+    <color name="primary_variant">#B8860B</color> <color name="dark_bg">#121212</color>
+    <color name="card_surface">#1E1E1E</color>
+    <color name="text_white">#FFFFFF</color>
+    <color name="text_gray">#BBFFFFFF</color>
+    
+    <color name="light_bg">#F5F5F5</color>
+    <color name="light_card">#FFFFFF</color>
+    <color name="text_black">#000000</color>
+</resources>

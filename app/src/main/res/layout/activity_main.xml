@@ -23,11 +23,11 @@
             app:cardElevation="0dp">
 
             <ImageView
-                android:id="@+id/ivLogo"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:src="@drawable/logo_lms" /> 
+              android:id="@+id/ivLogo"
+    android:layout_width="45dp"
+    android:layout_height="45dp"
+    android:src="@drawable/logo" 
+    android:scaleType="centerInside" />
                 </androidx.cardview.widget.CardView>
 
         <TextView
